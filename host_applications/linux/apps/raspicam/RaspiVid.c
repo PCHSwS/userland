@@ -75,6 +75,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <semaphore.h>
 
+#include <bcm2835.h> //include the lib for accressing GPIO
+
+#define PIN RPI_GPIO_P1_11 //set pin 11 as the output for framesync
+
 // Standard port setting for the camera component
 #define MMAL_CAMERA_PREVIEW_PORT 0
 #define MMAL_CAMERA_VIDEO_PORT 1
@@ -344,6 +348,14 @@ static void default_status(RASPIVID_STATE *state)
 
    // Set up the camera_parameters to default
    raspicamcontrol_set_defaults(&state->camera_parameters);
+   
+   //Set up the GPIO
+    if (!bcm2835_init())
+        return 1;
+    // Set the pin to be an output
+    bcm2835_gpio_fsel(PIN, BCM2835_GPIO_FSEL_OUTP);
+    //set the intial state, randomly chosen to be low at this time
+    bcm2835_gpio_write(PIN, LOW);
 }
 
 
@@ -900,6 +912,8 @@ static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
 {
    MMAL_BUFFER_HEADER_T *new_buffer;
    static int64_t base_time =  -1;
+   
+   //set the GPIO pin to low (again as it was initially low and has been set high at the end of the frame)
 
    // All our segment times based on the receipt of the first encoder callback
    if (base_time == -1)
@@ -957,7 +971,10 @@ static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
             }
 
             if(buffer->flags & MMAL_BUFFER_HEADER_FLAG_FRAME_END)
+            {
                frame_start = -1;
+               bcm2835_gpio_write(PIN, HIGH); //set the sync pin to high
+            }
 
             // If we overtake the iframe rptr then move the rptr along
             if((pData->iframe_buff_rpos + 1) % IFRAME_BUFSIZE != pData->iframe_buff_wpos)
