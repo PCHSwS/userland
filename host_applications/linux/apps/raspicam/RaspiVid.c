@@ -914,6 +914,7 @@ static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
    static int64_t base_time =  -1;
    
    //set the GPIO pin to low (again as it was initially low and has been set high at the end of the frame)
+   bcm2835_gpio_write(PIN, LOW);
 
    // All our segment times based on the receipt of the first encoder callback
    if (base_time == -1)
